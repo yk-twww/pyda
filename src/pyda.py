@@ -76,13 +76,12 @@ class pyda(object):
         else:
             return (next_node, -1)
     
+
     def get_label(self, current_node):
         children = self.get_child(current_node)
-        labels = []
-        for node in children:
-            labels.append(node - self.base[current_node])
-        
-        return labels
+        base_val = self.base[current_node]
+
+        return [node - base_val for node in children]
     
     def get_child(self, current_node):
         children = self.check_index[current_node][:]
@@ -240,7 +239,7 @@ class pyda(object):
     def forward(self, current_node, char, num_flag = 0):
         next_node = self.base[current_node]
         next_node += self.char_trans(char) if num_flag == 0 else char
-        if next_node > 0 and next_node < self.da_size and self.check[next_node] == current_node:
+        if 0 < next_node < self.da_size and self.check[next_node] == current_node:
             return next_node
         else:
             return -1
@@ -249,8 +248,7 @@ class pyda(object):
         add_arr = [0 for _ in xrange(extend_size)]
         self.base.extend(add_arr)
         self.check.extend(add_arr)
-        for i in xrange(self.da_size, self.da_size + extend_size):
-            self.unused_list.append(i)
+        self.unused_list.extend(range(self.da_size, self.da_size + extend_size))
         
         self.da_size += extend_size
 
@@ -260,17 +258,20 @@ class pyda(object):
 # And this List does't admit any two elements to be same.
 class sorted_list(object):
     # list must not contain same elements.
-    def __init__(self, list = [], sorted_flag = 0):
+    def __init__(self, ls = [], sorted_flag = 0):
         if sorted_flag:
-            self.list = list[:]
+            self.list = ls[:]
         else:
-            self.list = sorted(list)
+            self.list = sorted(list(set(ls)))
     
     def __getitem__(self, i):
         return self.list[i]
     
     def __len__(self):
         return len(self.list)
+
+    def extend(self, arr):
+        self.list.extend(arr)
     
     def index(self, elem):
         left = 0
