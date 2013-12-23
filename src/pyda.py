@@ -21,11 +21,25 @@ class pyda(object):
         (current_node, wd_pt) = self.failed_place(word)
         
         # wd_pt == -1 means word is already contained.
-        # In this case, we replace address
+        if wd_pt == -1:
+            return 0
+        
+        self._insert(current_node, word, wd_pt, address_num)
+
+        return 1
+
+    def upsert(self, word, address_num):
+        (current_node, wd_pt) = self.failed_place(word)
+
         if wd_pt == -1:
             self.write_base(current_node, -address_num)
             return 0
-        
+
+        self._insert(current_node, word, wd_pt, address_num)
+
+        return 1
+
+    def _insert(self, current_node, word, wd_pt, address_num):
         label = self.char_trans(word[wd_pt]) if wd_pt < len(word) else 1
         next_node = self.base[current_node] + label
         if next_node >= self.da_size or self.is_used(next_node):
@@ -33,8 +47,7 @@ class pyda(object):
         
         self.insert_rest(current_node, word, wd_pt, address_num)
         self.size += 1
-        return 1
-    
+
 
     def insert_rest(self, current_node, word, wd_pt, address_num):
         while wd_pt < len(word) + 1:
