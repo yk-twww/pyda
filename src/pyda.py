@@ -35,29 +35,26 @@ class pyda(object):
         self.size += 1
         return 1
     
+
     def insert_rest(self, current_node, word, wd_pt, address_num):
-        while wd_pt < len(word):
-            label = self.char_trans(word[wd_pt])
-            next_node = self.base[current_node] + label
-            
-            if next_node >= self.da_size or self.is_used(next_node):
-                new_base = self.search_empty_for_one_label(label)
-                self.write_base(current_node, new_base)
-                next_node = new_base + label
-            self.write_check(next_node, current_node)
-            current_node = next_node
-            wd_pt += 1
+        while wd_pt < len(word) + 1:
+            current_node, wd_pt = self.one_step_for_insert(current_node, word, wd_pt)
         
-        label = 1
+        self.write_base(current_node, -address_num)
+
+    def one_step_for_insert(self, current_node, word, wd_pt):
+        label = self.char_trans(word[wd_pt]) if wd_pt < len(word) else 1
         next_node = self.base[current_node] + label
+
         if next_node >= self.da_size or self.is_used(next_node):
             new_base = self.search_empty_for_one_label(label)
             self.write_base(current_node, new_base)
             next_node = new_base + label
-        
         self.write_check(next_node, current_node)
-        self.write_base(next_node, -address_num)
-    
+
+        return (next_node, wd_pt + 1)
+
+
     def failed_place(self, word):
         word_len = len(word)
         current_node = 1
@@ -170,16 +167,15 @@ class pyda(object):
                 self.write_check(child_node, new_node)
     
     def write_base(self, node, base_val):
-        #print node, base_val
         before = self.is_used(node)
         self.base[node] = base_val
         after = self.is_used(node)
         
-        if (not (before and after)) and (before or after):
-            if after:
-                self.unused_list.pop(node)
-            else:
-                self.unused_list.insert(node)
+        if after and (not before):
+            self.unused_list.pop(node)
+        elif (not after) and before:
+            self.unused_list.insert(node)
+                            
     
     def write_check(self, node, check_val):
         old_check_val = self.check[node]
@@ -191,12 +187,11 @@ class pyda(object):
             self.check_index[old_check_val].remove(node)
         if check_val != 0:
             self.check_index[check_val].append(node)
-        
-        if (not (before and after)) and (before or after):
-            if after:
-                self.unused_list.pop(node)
-            else:
-                self.unused_list.insert(node)
+      
+        if after and (not before):
+            self.unused_list.pop(node)
+        elif (not after) and before:
+            self.unused_list.insert(node)
     
     def is_used(self, node):
         return self.base[node] or self.check[node]
