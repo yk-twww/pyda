@@ -3,10 +3,19 @@
 # This version is beta version
 from collections import defaultdict, deque
 from operator import itemgetter
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 
 
 class pyda(object):
+    @classmethod
+    def load(cls, file_obj):
+        da = pickle.load(file_obj)
+        return da
+        
     def __init__(self, extend_size):
         self._can_build = True
         self.base = [0, 1]
@@ -18,7 +27,10 @@ class pyda(object):
         if extend_size < 1:
             raise Exception, "extend_size must be greater than 0"
         self.extend_size = extend_size
-    
+
+    def dump(self, file_obj):
+        pickle.dump(self, file_obj)
+
     def char_trans(self, char): # fix end-mark's number to 1
         return ord(char) + 2
 
