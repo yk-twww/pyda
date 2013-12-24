@@ -14,9 +14,9 @@ class pyda(object):
         self.da_size = 2
         self.check_index = defaultdict(list)
         self.unused_list= sorted_list()
-        self.size = 0                        # number of contained elements
+        self.size = 0                        # number of registerd words
         if extend_size < 1:
-            raise Exception, "extend_size must be grater than 0"
+            raise Exception, "extend_size must be greater than 0"
         self.extend_size = extend_size
     
     def char_trans(self, char): # fix end-mark's number to 1
@@ -24,9 +24,9 @@ class pyda(object):
 
     def _sort_by_word(self, words, address_nums):
         if len(words) == 0:
-            raise Exception, "first argument of _build must contain at least one element"
+            raise Exception, "first argument of .build must contain at least one element"
         elif len(words) != len(address_nums):
-            raise Exception, "words number and address number differ"
+            raise Exception, "words number and address_nums number differ"
         pairs = zip(words, address_nums)
         pairs.sort(key=itemgetter(0))
 
@@ -215,15 +215,15 @@ class pyda(object):
         else:
             return self.base[node] or self.check[node]
 
-    def is_used2(self, node):
-        return self.base[node] or self.check[node]
+
     
     def clear_node(self, node):
         self.write_base(node, 0)
         self.write_check(node, 0)
     
-    # return taple (address, is_succeedable), if word does't exit, address = -1.
-    # if next word may exist, is_succeedalbe = 1 else -1
+    # Return taple (address, contain_same_prefix_word?).
+    # If word does't contained, address = -1 else return registerd address.
+    # If there contained a word which has same prefix, is_succeedalbe = 1 else -1.
     def search(self, word):
         word_len = len(word)
         current_node = 1
@@ -238,11 +238,11 @@ class pyda(object):
         
         next_node = self.forward(current_node, 1, num_flag = 1)
         if next_node == -1:
-            return (-1, 1)    # this is possibly (-1, self.is_succeed(current_node))
+            return (-1, 1)    # This is possibly (-1, self.is_succeed(current_node))
         else:
             return (self.base[next_node], self.is_succeed(current_node, next_node))
     
-    # does have current_node a child except to end_node
+    # Check whether current_node has a child except to end_node.
     def is_succeed(self, current_node, end_node):
         contain_num = len(self.check_index[current_node])
         
@@ -251,8 +251,8 @@ class pyda(object):
         else:
             return -1
     
-    # decide whether it is transible.
-    # if transible, return next node number, else return -1.
+    # Check whether it is transible.
+    # If transible, return next node number, else return -1.
     def forward(self, current_node, char, num_flag = 0):
         next_node = self.base[current_node]
         next_node += self.char_trans(char) if num_flag == 0 else char
@@ -270,16 +270,11 @@ class pyda(object):
         self.da_size += extend_size
 
 
-# this object is a kind of Int List which ansure its
-# elements is always sorted.
+# This object is a kind of Int List which ansure its ements is always sorted.
 # And this List does't admit any two elements to be same.
 class sorted_list(object):
-    # list must not contain same elements.
-    def __init__(self, ls = [], sorted_flag = 0):
-        if sorted_flag:
-            self.list = ls[:]
-        else:
-            self.list = sorted(list(set(ls)))
+    def __init__(self, ls = []):
+        self.list = sorted(list(set(ls)))
     
     def __getitem__(self, i):
         return self.list[i]
@@ -341,8 +336,7 @@ class sorted_list(object):
         else:
             self.list.insert(left, elem)
 
-    # this messod can be used only if elem is asured
-    # to be the biggest in list
+    # This method can be used only if elem is asured to be the biggest in list.
     def append(self, elem):
         self.list.append(elem)
 
