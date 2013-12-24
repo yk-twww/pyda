@@ -1,21 +1,80 @@
 # -*- coding: utf-8 -*-
 
 # This version is beta version
-from collections import defaultdict
+from collections import defaultdict, deque
+from operator import itemgetter
 
-# fix end mark's number to 1
+
+
 class pyda(object):
     def __init__(self, extend_size):
+        self._can_build = True
         self.base = [0, 1]
         self.check =[0, 0]
         self.da_size = 2
         self.check_index = defaultdict(list)
         self.unused_list= sorted_list()
         self.size = 0                        # number of contained elements
+        if extend_size < 1:
+            raise Exception, "extend_size must be grater than 0"
         self.extend_size = extend_size
     
-    def char_trans(self, char):
+    def char_trans(self, char): # fix end-mark's number to 1
         return ord(char) + 2
+
+    def _sort_by_word(self, words, address_nums):
+        if len(words) == 0:
+            raise Exception, "first argument of _build must contain at least one element"
+        elif len(words) != len(address_nums):
+            raise Exception, "words number and address number differ"
+
+        pairs = zip(words, address_nums)
+        pairs.sort(key=itemgetter(0))
+
+        word_and_address = zip(*pairs)
+        return word_and_address
+
+
+    def build(self, words, address_nums):
+        if not self._can_build:
+            raise Exception, "build method can executed just after initializing"
+        words, address_nums = self._sort_by_word(words, address_nums)
+
+        stack = deque([[1, 0, len(words), 0, False]])
+        while len(stack) > 0:
+            current_node, left, right, wd_pt, is_leef = stack.popleft()
+            if is_leef:
+                self.write_base(current_node, -address_nums[left])
+                continue
+            children, labels = self.make_child(words, left, right, wd_pt)
+            new_base = self.search_empty(labels)
+            self.write_base(current_node, new_base)
+            for i, child in enumerate(children):
+                child[0] = new_base + labels[i]
+                self.write_check(child[0], current_node)
+            stack.extendleft(children)
+        self.size += len(words)
+        self._can_build = False
+
+    def make_child(self, words, left, right, wd_pt):
+        #print "make_child"
+        children  = deque()
+        labels = deque()
+        label1 = self.char_trans(words[left][wd_pt]) if wd_pt < len(words[left]) else 1
+        label2 = None
+        _left = left
+        for _right in xrange(left, right):
+            label2 = self.char_trans(words[_right][wd_pt]) if wd_pt < len(words[_right]) else 1
+            if label2 != label1:
+                children.appendleft([0, _left, _right, wd_pt + 1, label1 == 1])
+                labels.appendleft(label1)
+                label1 = label2
+                _left = _right
+        children.appendleft([0, _left, _right + 1, wd_pt + 1, label1 == 1])
+        labels.appendleft(label1)
+
+        return children, labels
+
 
     def insert(self, word, address_num):
         (current_node, wd_pt) = self.failed_place(word)
@@ -25,7 +84,6 @@ class pyda(object):
             return 0
         
         self._insert(current_node, word, wd_pt, address_num)
-
         return 1
 
     def upsert(self, word, address_num):
@@ -36,7 +94,6 @@ class pyda(object):
             return 0
 
         self._insert(current_node, word, wd_pt, address_num)
-
         return 1
 
     def _insert(self, current_node, word, wd_pt, address_num):
@@ -47,7 +104,6 @@ class pyda(object):
         
         self.insert_rest(current_node, word, wd_pt, address_num)
         self.size += 1
-
 
     def insert_rest(self, current_node, word, wd_pt, address_num):
         while wd_pt < len(word) + 1:
@@ -94,16 +150,15 @@ class pyda(object):
         return [node - base_val for node in children]
     
     def get_child(self, current_node):
-        children = self.check_index[current_node][:]
-        
-        return children
+        return self.check_index[current_node][:]
 
-    def search_empty(self, label_ls):
+    def search_empty2(self, label_ls):
         node_cands = self.unused_list.list
         cand_base = -1
         i = len(node_cands) / 2
         #i = 0
         while True:
+            #print "search_empty1111"
             for j in xrange(i, len(node_cands)):
                 cand_base = node_cands[j] - label_ls[0]
                 if cand_base > 0:
@@ -117,6 +172,7 @@ class pyda(object):
                 
         
         while True:
+            #print "search_empth2222"
             find_flag1 = 0
             for j in xrange(i, len(node_cands)):
                 
@@ -141,6 +197,17 @@ class pyda(object):
             if find_flag1 == 1:
                 break
         
+        return cand_base
+
+    def search_empty(self, labels):
+        for node_cand in self.unused_list.iter(self.da_size):
+            cand_base = node_cand - labels[0]
+            if cand_base > 0 and all(not self.is_used(cand_base + label) for label in labels):
+                break
+
+        max_node = cand_base + max(labels)
+        if max_node >= self.da_size:
+            self.extend_array(max_node - self.da_size + self.extend_size)
         return cand_base
 
     def search_empty_for_one_label(self, label):
@@ -207,6 +274,14 @@ class pyda(object):
             self.unused_list.insert(node)
     
     def is_used(self, node):
+        if node <= 1:
+            return False
+        elif node >= self.da_size:
+            return False
+        else:
+            return self.base[node] or self.check[node]
+
+    def is_used2(self, node):
         return self.base[node] or self.check[node]
     
     def clear_node(self, node):
@@ -256,7 +331,7 @@ class pyda(object):
         add_arr = [0 for _ in xrange(extend_size)]
         self.base.extend(add_arr)
         self.check.extend(add_arr)
-        self.unused_list.extend(range(self.da_size, self.da_size + extend_size))
+        self.unused_list.extend(xrange(self.da_size, self.da_size + extend_size))
         
         self.da_size += extend_size
 
@@ -277,6 +352,14 @@ class sorted_list(object):
     
     def __len__(self):
         return len(self.list)
+
+    def iter(self, num):
+        mid = len(self) / 2
+        for i in xrange(mid, len(self)):
+            yield self[i]
+        while True:
+            yield num
+            num += 1
 
     def extend(self, arr):
         self.list.extend(arr)
