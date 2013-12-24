@@ -27,7 +27,6 @@ class pyda(object):
             raise Exception, "first argument of _build must contain at least one element"
         elif len(words) != len(address_nums):
             raise Exception, "words number and address number differ"
-
         pairs = zip(words, address_nums)
         pairs.sort(key=itemgetter(0))
 
@@ -37,27 +36,26 @@ class pyda(object):
 
     def build(self, words, address_nums):
         if not self._can_build:
-            raise Exception, "build method can executed just after initializing"
+            raise Exception, "build method can executed just only after initializing"
         words, address_nums = self._sort_by_word(words, address_nums)
 
         stack = deque([[1, 0, len(words), 0, False]])
         while len(stack) > 0:
             current_node, left, right, wd_pt, is_leef = stack.popleft()
             if is_leef:
-                self.write_base(current_node, -address_nums[left])
+                self.write_base(current_node, address_nums[left])
                 continue
             children, labels = self.make_child(words, left, right, wd_pt)
             new_base = self.search_empty(labels)
             self.write_base(current_node, new_base)
-            for i, child in enumerate(children):
-                child[0] = new_base + labels[i]
+            for child in children:
+                child[0] += new_base
                 self.write_check(child[0], current_node)
             stack.extendleft(children)
         self.size += len(words)
         self._can_build = False
 
     def make_child(self, words, left, right, wd_pt):
-        #print "make_child"
         children  = deque()
         labels = deque()
         label1 = self.char_trans(words[left][wd_pt]) if wd_pt < len(words[left]) else 1
@@ -66,11 +64,11 @@ class pyda(object):
         for _right in xrange(left, right):
             label2 = self.char_trans(words[_right][wd_pt]) if wd_pt < len(words[_right]) else 1
             if label2 != label1:
-                children.appendleft([0, _left, _right, wd_pt + 1, label1 == 1])
+                children.appendleft([label1, _left, _right, wd_pt + 1, label1 == 1])
                 labels.appendleft(label1)
                 label1 = label2
                 _left = _right
-        children.appendleft([0, _left, _right + 1, wd_pt + 1, label1 == 1])
+        children.appendleft([label1, _left, _right + 1, wd_pt + 1, label1 == 1])
         labels.appendleft(label1)
 
         return children, labels
@@ -90,7 +88,7 @@ class pyda(object):
         (current_node, wd_pt) = self.failed_place(word)
 
         if wd_pt == -1:
-            self.write_base(current_node, -address_num)
+            self.write_base(current_node, address_num)
             return 0
 
         self._insert(current_node, word, wd_pt, address_num)
@@ -109,14 +107,14 @@ class pyda(object):
         while wd_pt < len(word) + 1:
             current_node, wd_pt = self.one_step_for_insert(current_node, word, wd_pt)
         
-        self.write_base(current_node, -address_num)
+        self.write_base(current_node, address_num)
 
     def one_step_for_insert(self, current_node, word, wd_pt):
         label = self.char_trans(word[wd_pt]) if wd_pt < len(word) else 1
         next_node = self.base[current_node] + label
 
         if next_node >= self.da_size or self.is_used(next_node):
-            new_base = self.search_empty_for_one_label(label)
+            new_base = self.search_empty([label])
             self.write_base(current_node, new_base)
             next_node = new_base + label
         self.write_check(next_node, current_node)
@@ -152,52 +150,6 @@ class pyda(object):
     def get_child(self, current_node):
         return self.check_index[current_node][:]
 
-    def search_empty2(self, label_ls):
-        node_cands = self.unused_list.list
-        cand_base = -1
-        i = len(node_cands) / 2
-        #i = 0
-        while True:
-            #print "search_empty1111"
-            for j in xrange(i, len(node_cands)):
-                cand_base = node_cands[j] - label_ls[0]
-                if cand_base > 0:
-                    i = j
-                    break
-            if cand_base > 0:
-                break
-            else:
-                i = len(node_cands)
-                self.extend_array(-cand_base + self.extend_size)
-                
-        
-        while True:
-            #print "search_empth2222"
-            find_flag1 = 0
-            for j in xrange(i, len(node_cands)):
-                
-                find_flag2 = 1
-                cand_base = node_cands[j] - label_ls[0]
-                for label in label_ls:
-                    next_node = cand_base + label
-                    if next_node < self.da_size:
-                        if self.is_used(next_node):
-                            find_flag2 = 0
-                            break
-                    else:
-                        self.extend_array(next_node - self.da_size + self.extend_size)
-                        find_flag2 = 0
-                        break
-                
-                if find_flag2 == 1:
-                    find_flag1 = 1
-                    break
-                else:
-                    i = j
-            if find_flag1 == 1:
-                break
-        
-        return cand_base
 
     def search_empty(self, labels):
         for node_cand in self.unused_list.iter(self.da_size):
@@ -210,22 +162,6 @@ class pyda(object):
             self.extend_array(max_node - self.da_size + self.extend_size)
         return cand_base
 
-    def search_empty_for_one_label(self, label):
-        node_cands = self.unused_list.list
-        cand_base = -1
-        i = len(node_cands) / 2
-        #i = 0
-        while True:
-            for j in xrange(i, len(node_cands)):
-                cand_base = node_cands[j] - label
-                if cand_base > 0:
-                    break
-            if cand_base > 0:
-                break
-            else:
-                i = len(node_cands)
-                self.extend_array(-cand_base + self.extend_size)
-        return cand_base
 
     def modify(self, current_node, new_label):
         label_ls = self.get_label(current_node)
@@ -274,9 +210,7 @@ class pyda(object):
             self.unused_list.insert(node)
     
     def is_used(self, node):
-        if node <= 1:
-            return False
-        elif node >= self.da_size:
+        if node >= self.da_size:
             return False
         else:
             return self.base[node] or self.check[node]
@@ -306,7 +240,7 @@ class pyda(object):
         if next_node == -1:
             return (-1, 1)    # this is possibly (-1, self.is_succeed(current_node))
         else:
-            return (-self.base[next_node], self.is_succeed(current_node, next_node))
+            return (self.base[next_node], self.is_succeed(current_node, next_node))
     
     # does have current_node a child except to end_node
     def is_succeed(self, current_node, end_node):
