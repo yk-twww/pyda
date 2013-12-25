@@ -22,7 +22,7 @@ da.search("rose")     #=> (-1, -1)
 da.insert("rose", 12)
 da.search("rose")      #=> (12, -1)
 ```
-Returned value of *.search* is a tuple, whose first element is registerd index and second one is indicator whether a same prefix word is registerd in this *double array*. Indicator is 1(-1) means same prefix word is(is not) registored.
+Returned value of *.search* is a tuple, whose first element is registerd index or -1 if the word is not found and second one is indicator whether a same prefix word is registerd in this *double array*. Indicator 1(-1) means same prefix word is(is not) registored.
 
 
 ## Documentation
@@ -46,12 +46,11 @@ Number of registerd words.
 #### .*insert*(*word*, *address_num*)
 #### .*upsert*(*word*, *address_num*)
 #### .*search*(*word*)
+#### .*common_prefix_search*(*word*[, *is_unicode*=False])
 #### .*delete*(*word*)
 #### .*dump*(*file_obj*)
 
 
 ## To Do
-* implement an instance method *.delete*
-* implement common prefix search
 * make *.build* and *.insert* faster.
 * refactoring!
