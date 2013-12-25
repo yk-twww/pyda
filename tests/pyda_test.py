@@ -20,23 +20,13 @@ class PydaTestCase(unittest.TestCase):
 
         self.da.build(words, address)
 
-        res1 = self.da.search("")
-        assert res1 == (3, 1)
+        assert self.da.search("")          == (3, 1)
+        assert self.da.search("pine")      == (1, 1)
+        assert self.da.search("cherry")    == (2, -1)
+        assert self.da.search("pineapple") == (1, -1)
 
-        res2 = self.da.search("pine")
-        assert res2 == (1, 1)
-
-        res3 = self.da.search("cherry")
-        assert res3 == (2, -1)
-
-        res4 = self.da.search("pineapple")
-        assert res4 == (1, -1)
-
-        res5 = self.da.search("apple")
-        assert res5 == (-1, -1)
-
-        res6 = self.da.search("pin")
-        assert res6 == (-1, 1)
+        assert self.da.search("apple") == (-1, -1)
+        assert self.da.search("pin")   == (-1, 1)
 
 
     def test_insert(self):
@@ -44,22 +34,14 @@ class PydaTestCase(unittest.TestCase):
         address = [10, 5, 8]
 
         for i in range(3):
-            self.da.insert(words[i], address[i])
+            assert self.da.insert(words[i], address[i]) == 1
 
-        res1 = self.da.search("cherry blossom")
-        assert res1 == (10, -1)
+        assert self.da.search("cherry blossom") == (10, -1)
+        assert self.da.search("red")            == (5, 1)
+        assert self.da.search("red onion")      == (8, -1)
 
-        res2 = self.da.search("red")
-        assert res2 == (5, 1)
-
-        res3 = self.da.search("red onion")
-        assert res3 == (8, -1)
-
-        res4 = self.da.search("blue onion")
-        assert res4 == (-1, -1)
-
-        res5 = self.da.search("cherry")
-        assert res5 == (-1, 1)
+        assert self.da.search("blue onion") == (-1, -1)
+        assert self.da.search("cherry")     == (-1, 1)
 
 
     def test_build_and_insert(self):
@@ -72,21 +54,15 @@ class PydaTestCase(unittest.TestCase):
 
         self.da.build(words1, address1)
 
-        res1 = self.da.search("cherry")
-        assert res1 == (2, -1)
-
-        res2 = self.da.search("red")
-        assert res2 == (-1, -1)
+        assert self.da.search("cherry") == (2, -1)
+        assert self.da.search("red")    == (-1, -1)
 
 
         for i in range(3):
-            self.da.insert(words2[i], address2[i])
+            assert self.da.insert(words2[i], address2[i]) == 1
 
-        res3 = self.da.search("red")
-        assert res3 == (5, 1)
-
-        res4 = self.da.search("cherry")
-        assert res4 == (2, 1)
+        assert self.da.search("red")    == (5, 1)
+        assert self.da.search("cherry") == (2, 1)
 
 
     def test_insert_and_upsert(self):
@@ -95,26 +71,20 @@ class PydaTestCase(unittest.TestCase):
 
         self.da.build(words, address)
 
-        res1 = self.da.search("pine")
-        assert res1 == (1, 1)
+        assert self.da.search("pine")     == (1, 1)
+        assert self.da.insert("pine", 23) == 0
+        assert self.da.search("pine")     == (1, 1)
 
-        self.da.insert("pine", 23)
-        res2 = self.da.search("pine")
-        assert res2 == (1, 1)
-
-        self.da.upsert("pine", 23)
-        res3 = self.da.search("pine")
-        assert res3 == (23, 1)
+        assert self.da.upsert("pine", 23) == 0
+        assert self.da.search("pine")     == (23, 1)
 
 
     def test_large_build(self):
         words = self.read_words()
         address = range(len(words))
 
-        #s_t = time.clock()
         self.da.build(words, address)
-        #e_t = time.clock()
-        #print "building: ", e_t - s_t, "sec"
+
         for i in address:
             res = self.da.search(words[i])
             if res[0] != i:
@@ -148,24 +118,19 @@ class PydaTestCase(unittest.TestCase):
 
         self.da.build(words, address)
 
-        res1 = self.da.search("apple")
-        assert res1 == (1, -1)
+        assert self.da.search("apple") == (1, -1)
+        assert self.da.delete("apple") == 1
+        assert self.da.search("apple") == (-1, -1)
 
-        self.da.delete("apple")
-        res2 = self.da.search("apple")
-        assert res2 == (-1, -1)
+        assert self.da.search("banana") == (-1, -1)
+        assert self.da.delete("banana") == 0
+        assert self.da.search("banana") == (-1, -1)
 
-        res3 = self.da.search("banana")
-        assert res3 == (-1, -1)
-
-        self.da.delete("banana")
-        res4 = self.da.search("banana")
-        assert res4 == (-1, -1)
-
-        assert self.da.search("pine") == (9, 1)
+        assert self.da.search("pine")      == (9, 1)
         assert self.da.search("pineapple") == (12, -1)
-        self.da.delete("pineapple")
-        assert self.da.search("pine") == (9, -1)
+        assert self.da.delete("pineapple") == 1
+        assert self.da.search("pine")      == (9, -1)
+        assert self.da.search("pineapple") == (-1, -1)
 
 
 
