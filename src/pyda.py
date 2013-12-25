@@ -34,6 +34,12 @@ class pyda(object):
     def char_trans(self, char): # fix end-mark's number to 1
         return ord(char) + 2
 
+    def recover_char(self, num, is_unicode = False):
+        if is_unicode:
+            return unichr(num - 2) if num != 1 else u""
+        else:
+            return chr(num - 2) if num != 1 else ""
+
     def _sort_by_word(self, words, address_nums):
         if len(words) == 0:
             raise Exception, "first argument of .build must contain at least one element"
@@ -279,7 +285,33 @@ class pyda(object):
             return (-1, 1)    # This is possibly (-1, self.is_succeed(current_node))
         else:
             return (self.base[next_node], self.is_succeed(current_node, next_node))
-    
+
+
+    def common_prefix_search(self, word, is_unicode = False):
+        current_node, wd_pt = self.failed_place(word)
+        if wd_pt == -1:
+            current_node = self.check[current_node]
+        elif wd_pt < len(word) - 1:
+            return []
+
+        searched_words = deque()
+        stack = deque([(word, current_node, False)])
+        while len(stack) > 0:
+            prefix, current_node, is_leaf = stack.popleft()
+            if is_leaf:
+                searched_words.append((prefix, self.base[current_node]))
+                continue
+            child_nodes = self.get_child(current_node)
+            current_base = self.base[current_node]
+            for child_node in child_nodes:
+                stack.appendleft((prefix + self.recover_char(child_node - current_base,
+                                                             is_unicode),
+                                  child_node,
+                                  child_node - current_base == 1))
+
+        return list(searched_words)
+
+
     # Check whether current_node has a child except to end_node.
     def is_succeed(self, current_node, end_node):
         contain_num = len(self.check_index[current_node])
