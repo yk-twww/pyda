@@ -17,7 +17,7 @@ da.search("apple")    #=> (3, -1)
 da.search("pine")     #=> (0,  1) second element is 1 since "pine" is prefix of "pineapple"
 da.search("cherry")   #=> (5, -1)
 da.search("pineapple")#=> (9, -1)
-da.search("rose")     #=> (0, -1)
+da.search("rose")     #=> (-1, -1)
 
 da.insert("rose", 12)
 da.search("rose")      #=> (12, -1)
