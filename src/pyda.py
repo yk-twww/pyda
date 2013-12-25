@@ -134,6 +134,32 @@ class pyda(object):
         return (next_node, wd_pt + 1)
 
 
+    def delete(self, word):
+        word_len = len(word)
+        current_node = 1
+        wd_pt = 0
+        
+        while wd_pt < word_len:
+            next_node = self.forward(current_node, word[wd_pt])
+            if next_node == -1:
+                return 0
+            current_node = next_node
+            wd_pt += 1
+        
+        end_node = self.forward(current_node, 1, num_flag = 1)
+        if end_node == -1:
+            return 0
+
+        child_num = 0
+        while child_num == 0:
+            parent_node = self.check[end_node]
+            self.clear_node(end_node)
+            child_num = len(self.check_index[parent_node])
+            end_node = parent_node
+        
+        return 1
+
+
     def failed_place(self, word):
         word_len = len(word)
         current_node = 1
