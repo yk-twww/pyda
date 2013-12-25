@@ -46,6 +46,7 @@ Number of registerd words.
 #### .*insert*(*word*, *address_num*)
 #### .*upsert*(*word*, *address_num*)
 #### .*search*(*word*)
+#### .*delete*(*word*)
 #### .*dump*(*file_obj*)
 
 
