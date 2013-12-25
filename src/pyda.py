@@ -259,7 +259,6 @@ class pyda(object):
         else:
             return self.base[node] or self.check[node]
 
-
     
     def clear_node(self, node):
         self.write_base(node, 0)
@@ -291,7 +290,7 @@ class pyda(object):
         current_node, wd_pt = self.failed_place(word)
         if wd_pt == -1:
             current_node = self.check[current_node]
-        elif wd_pt < len(word) - 1:
+        elif wd_pt < len(word):
             return []
 
         searched_words = deque()
