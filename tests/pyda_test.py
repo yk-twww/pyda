@@ -140,6 +140,8 @@ class PydaTestCase(unittest.TestCase):
         assert set(self.da.common_prefix_search("go ")) == set([("go back", 1),
                                                                 ("go back of", 2),
                                                                 ("go on", 3)])
+        print self.da.common_prefix_search("god")
+        assert set(self.da.common_prefix_search("god")) == set([])
 
 
 
