@@ -17,7 +17,6 @@ class PydaTestCase(unittest.TestCase):
     def test_build(self):
         words   = ["", "pine", "cherry", "pineapple"]
         address = [3, 1, 2, 1]
-
         self.da.build(words, address)
 
         assert self.da.search("")          == (3, 1)
@@ -32,7 +31,6 @@ class PydaTestCase(unittest.TestCase):
     def test_insert(self):
         words   = ["cherry blossom", "red", "red onion"]
         address = [10, 5, 8]
-
         for i in range(3):
             assert self.da.insert(words[i], address[i]) == 1
 
@@ -51,7 +49,6 @@ class PydaTestCase(unittest.TestCase):
         words2   = ["cherry blossom", "red", "red onion"]
         address2 = [10, 5, 8]
 
-
         self.da.build(words1, address1)
 
         assert self.da.search("cherry") == (2, -1)
@@ -68,7 +65,6 @@ class PydaTestCase(unittest.TestCase):
     def test_insert_and_upsert(self):
         words   = ["", "pine", "cherry", "pineapple"]
         address = [3, 1, 2, 1]
-
         self.da.build(words, address)
 
         assert self.da.search("pine")     == (1, 1)
@@ -82,7 +78,6 @@ class PydaTestCase(unittest.TestCase):
     def test_large_build(self):
         words = self.read_words()
         address = range(len(words))
-
         self.da.build(words, address)
 
         for i in address:
@@ -94,7 +89,6 @@ class PydaTestCase(unittest.TestCase):
     def test_large_insert(self):
         words = self.read_words()
         address = range(len(words))
-
         for i in address:
             self.da.insert(words[i], i)
 
@@ -115,7 +109,6 @@ class PydaTestCase(unittest.TestCase):
     def test_delete(self):
         words   = ["apple", "rose", "pine", "pineapple"]
         address = [1, 4, 9, 12]
-
         self.da.build(words, address)
 
         assert self.da.search("apple") == (1, -1)
@@ -131,6 +124,22 @@ class PydaTestCase(unittest.TestCase):
         assert self.da.delete("pineapple") == 1
         assert self.da.search("pine")      == (9, -1)
         assert self.da.search("pineapple") == (-1, -1)
+
+
+    def test_common_prefix_search(self):
+        words   = ["go", "go back", "go back of", "go on", "good", "set"]
+        address = [0, 1, 2, 3, 4, 5]
+        self.da.build(words, address)
+
+        assert set(self.da.common_prefix_search("")) == set(zip(words, address))
+        assert set(self.da.common_prefix_search("go")) == set([("go", 0),
+                                                               ("go back", 1),
+                                                               ("go back of", 2),
+                                                               ("go on", 3),
+                                                               ("good", 4)])
+        assert set(self.da.common_prefix_search("go ")) == set([("go back", 1),
+                                                                ("go back of", 2),
+                                                                ("go on", 3)])
 
 
 
