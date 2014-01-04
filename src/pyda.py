@@ -17,12 +17,11 @@ class pyda(object):
         return da
         
     def __init__(self, extend_size):
-        self._can_build = True
         self.da_size = 3
         self.unused_head = 2
         self.unused_tail = 2
         self.base = [0, 1, -self.da_size]
-        self.check =[0, 0, 0]
+        self.check = [0, 0, 0]
         self.check_index = defaultdict(list)
         self.size = 0                        # number of registerd words
         if extend_size < 1:
@@ -54,14 +53,12 @@ class pyda(object):
 
 
     def build(self, words, address_nums):
-        if not self._can_build:
-            raise Exception, "build method can executed just only after initializing"
         words, address_nums = self._sort_by_word(words, address_nums)
 
         stack = deque([[1, 0, len(words), 0, False]])
         while len(stack) > 0:
-            current_node, left, right, wd_pt, is_leef = stack.popleft()
-            if is_leef:
+            current_node, left, right, wd_pt, is_leaf = stack.popleft()
+            if is_leaf:
                 self.write_base(current_node, address_nums[left])
                 continue
             children, labels = self.make_child(words, left, right, wd_pt)
@@ -72,7 +69,6 @@ class pyda(object):
                 self.write_check(child[0], current_node)
             stack.extendleft(children)
         self.size += len(words)
-        self._can_build = False
 
     def make_child(self, words, left, right, wd_pt):
         children  = deque()
@@ -120,7 +116,7 @@ class pyda(object):
             self.extend_array(next_node - self.da_size + self.extend_size)
         elif self.is_used(next_node):
             new_base = self.search_empty(self.get_label(current_node) + [label])
-            self.modify2(current_node, new_base)
+            self.modify(current_node, new_base)
             next_node = new_base + label
         self.write_check(next_node, current_node)
         
@@ -129,19 +125,16 @@ class pyda(object):
 
     def insert_rest(self, current_node, word, wd_pt, address_num):
         while wd_pt < len(word) + 1:
-            current_node, wd_pt = self.one_step_for_insert(current_node, word, wd_pt)
+            label = self.char_trans(word[wd_pt]) if wd_pt < len(word) else 1
+            new_base = self.search_empty([label])
+            self.write_base(current_node, new_base)
+            next_node = new_base + label
+            self.write_check(next_node, current_node)
+
+            current_node = next_node
+            wd_pt += 1
         
         self.write_base(current_node, address_num)
-
-    def one_step_for_insert(self, current_node, word, wd_pt):
-        label = self.char_trans(word[wd_pt]) if wd_pt < len(word) else 1
-        new_base = self.search_empty([label])
-        self.write_base(current_node, new_base)
-        next_node = new_base + label
-
-        self.write_check(next_node, current_node)
-
-        return (next_node, wd_pt + 1)
 
 
     def delete(self, word):
@@ -199,52 +192,27 @@ class pyda(object):
         return self.check_index[current_node][:]
 
 
-    def _unused_iter(self):
-        current_node = self.unused_head
-        while current_node < self.da_size:
-            yield current_node
-            current_node = -self.base[current_node]
-
-        while True:
-            yield current_node
-            current_node += 1
-
     def search_empty(self, labels):
-        for node_cand in self._unused_iter():
+        node_cand = self.unused_head
+        max_label = max(labels)
+        while node_cand < self.da_size:
             cand_base = node_cand - labels[0]
             if cand_base >= 0 and all(not self.is_used(cand_base + label) for label in labels):
-                break
+                max_node = cand_base + max_label
+                if max_node >= self.da_size:
+                    self.extend_array(max_node - self.da_size + self.extend_size)
+                return cand_base
+            node_cand = -self.base[node_cand]
 
-        max_node = cand_base + max(labels)
-        if max_node >= self.da_size:
-            self.extend_array(max_node - self.da_size + self.extend_size)
-        return cand_base
+        while True:
+            if cand_base >= 0 and all(not self.is_used(cand_base + label) for label in labels):
+                max_node = node_cand + max_label
+                self.extend_array(max_node - self.da_size + self.extend_size)
+                return cand_base
+            cand_base += 1
 
-
-    def modify(self, current_node, new_label):
-        label_ls = self.get_label(current_node)
-        new_base = self.search_empty(label_ls + [new_label])
-        
+    def modify(self, current_node, new_base):
         old_base = self.base[current_node]
-        self.write_base(current_node, new_base)
-        
-        for label in label_ls:
-            new_node = new_base + label
-            self.write_check(new_node, current_node)
-            
-            old_node = old_base + label
-            self.write_base(new_node, self.base[old_node])
-            #self.clear_node(old_node)
-            
-            children = self.get_child(old_node)
-            for child_node in children:
-                self.write_check(child_node, new_node)
-            self.clear_node(old_node)
-
-    def modify2(self, current_node, new_base):
-        old_base = self.base[current_node]
-        if new_base == old_base:
-            return
         label_ls = self.get_label(current_node)
         self.write_base(current_node, new_base)
         
