@@ -18,11 +18,12 @@ class pyda(object):
         
     def __init__(self, extend_size):
         self._can_build = True
-        self.base = [0, 1]
-        self.check =[0, 0]
-        self.da_size = 2
+        self.da_size = 3
+        self.unused_head = 2
+        self.unused_tail = 2
+        self.base = [0, 1, -self.da_size]
+        self.check =[0, 0, 0]
         self.check_index = defaultdict(list)
-        self.unused_list= sorted_list()
         self.size = 0                        # number of registerd words
         if extend_size < 1:
             raise Exception, "extend_size must be greater than 0"
@@ -93,8 +94,8 @@ class pyda(object):
 
 
     def insert(self, word, address_num):
-        (current_node, wd_pt) = self.failed_place(word)
-        
+        current_node, wd_pt = self.failed_place(word)
+
         # wd_pt == -1 means word is already contained.
         if wd_pt == -1:
             return 0
@@ -103,7 +104,7 @@ class pyda(object):
         return 1
 
     def upsert(self, word, address_num):
-        (current_node, wd_pt) = self.failed_place(word)
+        current_node, wd_pt = self.failed_place(word)
 
         if wd_pt == -1:
             self.write_base(current_node, address_num)
@@ -115,10 +116,15 @@ class pyda(object):
     def _insert(self, current_node, word, wd_pt, address_num):
         label = self.char_trans(word[wd_pt]) if wd_pt < len(word) else 1
         next_node = self.base[current_node] + label
-        if next_node >= self.da_size or self.is_used(next_node):
-            self.modify(current_node, label)
+        if next_node >= self.da_size:
+            self.extend_array(next_node - self.da_size + self.extend_size)
+        elif self.is_used(next_node):
+            new_base = self.search_empty(self.get_label(current_node) + [label])
+            self.modify2(current_node, new_base)
+            next_node = new_base + label
+        self.write_check(next_node, current_node)
         
-        self.insert_rest(current_node, word, wd_pt, address_num)
+        self.insert_rest(next_node, word, wd_pt+1, address_num)
         self.size += 1
 
     def insert_rest(self, current_node, word, wd_pt, address_num):
@@ -129,12 +135,10 @@ class pyda(object):
 
     def one_step_for_insert(self, current_node, word, wd_pt):
         label = self.char_trans(word[wd_pt]) if wd_pt < len(word) else 1
-        next_node = self.base[current_node] + label
+        new_base = self.search_empty([label])
+        self.write_base(current_node, new_base)
+        next_node = new_base + label
 
-        if next_node >= self.da_size or self.is_used(next_node):
-            new_base = self.search_empty([label])
-            self.write_base(current_node, new_base)
-            next_node = new_base + label
         self.write_check(next_node, current_node)
 
         return (next_node, wd_pt + 1)
@@ -195,10 +199,20 @@ class pyda(object):
         return self.check_index[current_node][:]
 
 
+    def _unused_iter(self):
+        current_node = self.unused_head
+        while current_node < self.da_size:
+            yield current_node
+            current_node = -self.base[current_node]
+
+        while True:
+            yield current_node
+            current_node += 1
+
     def search_empty(self, labels):
-        for node_cand in self.unused_list.iter(self.da_size):
+        for node_cand in self._unused_iter():
             cand_base = node_cand - labels[0]
-            if cand_base > 0 and all(not self.is_used(cand_base + label) for label in labels):
+            if cand_base >= 0 and all(not self.is_used(cand_base + label) for label in labels):
                 break
 
         max_node = cand_base + max(labels)
@@ -220,50 +234,86 @@ class pyda(object):
             
             old_node = old_base + label
             self.write_base(new_node, self.base[old_node])
-            self.clear_node(old_node)
+            #self.clear_node(old_node)
             
             children = self.get_child(old_node)
             for child_node in children:
                 self.write_check(child_node, new_node)
-    
+            self.clear_node(old_node)
+
+    def modify2(self, current_node, new_base):
+        old_base = self.base[current_node]
+        if new_base == old_base:
+            return
+        label_ls = self.get_label(current_node)
+        self.write_base(current_node, new_base)
+        
+        for label in label_ls:
+            new_node = new_base + label
+            self.write_check(new_node, current_node)
+            
+            old_node = old_base + label
+            self.write_base(new_node, self.base[old_node])
+            
+            children = self.get_child(old_node)
+            for child_node in children:
+                self.write_check(child_node, new_node)
+            self.clear_node(old_node)
+
+    # Don't use .write_base and .write_check methods for clearing node.
     def write_base(self, node, base_val):
-        before = self.is_used(node)
+        if not self.is_used(node):
+            next_node = -self.base[node]
+            pre_node  = -self.check[node]
+            if pre_node != 0:
+                self.base[pre_node] = -next_node
+            else:
+                self.unused_head = next_node
+            if next_node != self.da_size:
+                self.check[next_node] = -pre_node
+            else:
+                self.unused_tail = pre_node
+
         self.base[node] = base_val
-        after = self.is_used(node)
-        
-        if after and (not before):
-            self.unused_list.pop(node)
-        elif (not after) and before:
-            self.unused_list.insert(node)
                             
-    
     def write_check(self, node, check_val):
+        if not self.is_used(node):
+            next_node = -self.base[node]
+            pre_node  = -self.check[node]
+            if pre_node != 0:
+                self.base[pre_node] = -next_node
+            else:
+                self.unused_head = next_node
+            if next_node != self.da_size:
+                self.check[next_node] = -pre_node
+            else:
+                self.unused_tail = pre_node
+
         old_check_val = self.check[node]
-        before = self.is_used(node)
-        self.check[node] = check_val
-        after = self.is_used(node)
-        
-        if old_check_val != 0:
+        if old_check_val > 0:
             self.check_index[old_check_val].remove(node)
-        if check_val != 0:
-            self.check_index[check_val].append(node)
-      
-        if after and (not before):
-            self.unused_list.pop(node)
-        elif (not after) and before:
-            self.unused_list.insert(node)
+        self.check_index[check_val].append(node)
+
+        self.check[node] = check_val
     
     def is_used(self, node):
         if node >= self.da_size:
             return False
         else:
-            return self.base[node] or self.check[node]
+            return self.base[node]>=0 or self.check[node]>0
 
-    
+    # Don't use this method for a node which is not used.
+    # You must not use .write_base and .write_check methods in this method.
     def clear_node(self, node):
-        self.write_base(node, 0)
-        self.write_check(node, 0)
-    
+        self.base[node] = -self.unused_head
+        old_check_val = self.check[node]
+        self.check[node] = 0
+        self.check[self.unused_head] = -node
+        self.unused_head = node
+
+        if old_check_val > 0:
+            self.check_index[old_check_val].remove(node)
+
     # Return taple (address, contain_same_prefix_word?).
     # If word does't contained, address = -1 else return registerd address.
     # If there contained a word which has same prefix, is_succeedalbe = 1 else -1.
@@ -286,7 +336,7 @@ class pyda(object):
             return (self.base[next_node], self.is_succeed(current_node, next_node))
 
 
-    def common_prefix_search(self, word, is_unicode = False):
+    def common_prefix_search(self, word, is_unicode=False):
         current_node, wd_pt = self.failed_place(word)
         if wd_pt == -1:
             current_node = self.check[current_node]
@@ -331,12 +381,12 @@ class pyda(object):
             return -1
     
     def extend_array(self, extend_size):
-        add_arr = [0 for _ in xrange(extend_size)]
-        self.base.extend(add_arr)
-        self.check.extend(add_arr)
-        self.unused_list.extend(xrange(self.da_size, self.da_size + extend_size))
-        
+        self.base.extend( xrange(-self.da_size - 1, -self.da_size - extend_size - 1, -1))
+        self.check.extend(xrange(-self.da_size + 1, -self.da_size - extend_size + 1, -1))
+
+        self.check[self.da_size] = -self.unused_tail
         self.da_size += extend_size
+        self.unused_tail = self.da_size - 1
 
 
 # This object is a kind of Int List which ansure its ements is always sorted.
