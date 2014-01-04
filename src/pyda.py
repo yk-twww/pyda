@@ -20,8 +20,8 @@ class pyda(object):
         self.da_size = 3
         self.unused_head = 2
         self.unused_tail = 2
-        self.base = [0, 1, -self.da_size]
-        self.check = [0, 0, 0]
+        self.base = [0, 1, -self.da_size]  # Index 0 is not used since a check value
+        self.check = [0, 0, 0]             # for used index need to be positive.
         self.check_index = defaultdict(list)
         self.size = 0                        # number of registerd words
         if extend_size < 1:
@@ -97,6 +97,7 @@ class pyda(object):
             return 0
         
         self._insert(current_node, word, wd_pt, address_num)
+        self.size += 1
         return 1
 
     def upsert(self, word, address_num):
@@ -107,6 +108,7 @@ class pyda(object):
             return 0
 
         self._insert(current_node, word, wd_pt, address_num)
+        self.size += 1
         return 1
 
     def _insert(self, current_node, word, wd_pt, address_num):
@@ -159,16 +161,16 @@ class pyda(object):
             self.clear_node(end_node)
             child_num = len(self.check_index[parent_node])
             end_node = parent_node
-        
+
+        self.size -= 1
         return 1
 
 
     def failed_place(self, word):
-        word_len = len(word)
         current_node = 1
         wd_pt = 0
         
-        while wd_pt < word_len:
+        while wd_pt < len(word):
             next_node = self.forward(current_node, word[wd_pt])
             if next_node == -1:
                 return (current_node, wd_pt)
@@ -197,7 +199,7 @@ class pyda(object):
         max_label = max(labels)
         while node_cand < self.da_size:
             cand_base = node_cand - labels[0]
-            if cand_base >= 0 and all(not self.is_used(cand_base + label) for label in labels):
+            if all(not self.is_used(cand_base + label) for label in labels):
                 max_node = cand_base + max_label
                 if max_node >= self.da_size:
                     self.extend_array(max_node - self.da_size + self.extend_size)
@@ -205,7 +207,7 @@ class pyda(object):
             node_cand = -self.base[node_cand]
 
         while True:
-            if cand_base >= 0 and all(not self.is_used(cand_base + label) for label in labels):
+            if all(not self.is_used(cand_base + label) for label in labels):
                 max_node = node_cand + max_label
                 self.extend_array(max_node - self.da_size + self.extend_size)
                 return cand_base
@@ -242,6 +244,10 @@ class pyda(object):
             else:
                 self.unused_tail = pre_node
 
+            # There is no meaning for 1 except to positive.
+            # Positiveness of check value is used in order to decide a node is used.
+            self.check[node] = 1 
+
         self.base[node] = base_val
                             
     def write_check(self, node, check_val):
@@ -263,12 +269,14 @@ class pyda(object):
         self.check_index[check_val].append(node)
 
         self.check[node] = check_val
-    
+
     def is_used(self, node):
         if node >= self.da_size:
             return False
+        elif node <= 1:
+            return True
         else:
-            return self.base[node]>=0 or self.check[node]>0
+            return self.check[node] > 0
 
     # Don't use this method for a node which is not used.
     # You must not use .write_base and .write_check methods in this method.
@@ -355,81 +363,3 @@ class pyda(object):
         self.check[self.da_size] = -self.unused_tail
         self.da_size += extend_size
         self.unused_tail = self.da_size - 1
-
-
-# This object is a kind of Int List which ansure its ements is always sorted.
-# And this List does't admit any two elements to be same.
-class sorted_list(object):
-    def __init__(self, ls = []):
-        self.list = sorted(list(set(ls)))
-    
-    def __getitem__(self, i):
-        return self.list[i]
-    
-    def __len__(self):
-        return len(self.list)
-
-    def iter(self, num):
-        mid = len(self) / 2
-        for i in xrange(mid, len(self)):
-            yield self[i]
-        while True:
-            yield num
-            num += 1
-
-    def extend(self, arr):
-        self.list.extend(arr)
-    
-    def index(self, elem):
-        left = 0
-        right = len(self) - 1
-        
-        if right == -1:
-            return -1
-        
-        while left != right:
-            mid = (left + right) / 2
-            if self[mid] == elem:
-                return mid
-            elif self[mid] < elem:
-                left = mid + 1
-            else:
-                right = mid
-        
-        if self[left] == elem:
-            return left
-        else:
-            return -1
-    
-    def insert(self, elem):
-        left = 0
-        right = len(self) - 1
-        
-        if right == -1 or self[right] < elem :
-            self.list.append(elem)
-            return
-        
-        while left != right:
-            mid = (left + right) / 2
-            if self[mid] == elem:
-                return
-            elif self[mid] < elem:
-                left = mid + 1
-            else:
-                right = mid
-        
-        if self[left] == elem:
-            return
-        else:
-            self.list.insert(left, elem)
-
-    # This method can be used only if elem is asured to be the biggest in list.
-    def append(self, elem):
-        self.list.append(elem)
-
-    def pop(self, elem):
-        index = self.index(elem)
-        if index == -1:
-            return
-        
-        del self.list[index]
