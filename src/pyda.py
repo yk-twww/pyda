@@ -123,7 +123,7 @@ class pyda(object):
         self.write_check(next_node, current_node)
         
         self.insert_rest(next_node, word, wd_pt+1, address_num)
-        self.size += 1
+
 
     def insert_rest(self, current_node, word, wd_pt, address_num):
         while wd_pt < len(word) + 1:
@@ -140,11 +140,10 @@ class pyda(object):
 
 
     def delete(self, word):
-        word_len = len(word)
         current_node = 1
         wd_pt = 0
         
-        while wd_pt < word_len:
+        while wd_pt < len(word):
             next_node = self.forward(current_node, word[wd_pt])
             if next_node == -1:
                 return 0
@@ -206,9 +205,10 @@ class pyda(object):
                 return cand_base
             node_cand = -self.base[node_cand]
 
+        cand_base = self.da_size - labels[0]
         while True:
             if all(not self.is_used(cand_base + label) for label in labels):
-                max_node = node_cand + max_label
+                max_node = cand_base + max_label
                 self.extend_array(max_node - self.da_size + self.extend_size)
                 return cand_base
             cand_base += 1
@@ -231,23 +231,10 @@ class pyda(object):
             self.clear_node(old_node)
 
     # Don't use .write_base and .write_check methods for clearing node.
+    # Don't use .write_base methods for unused node.
+    # We suppose .write_check method is first used for unused node, then .write_base
+    # method is used for it.
     def write_base(self, node, base_val):
-        if not self.is_used(node):
-            next_node = -self.base[node]
-            pre_node  = -self.check[node]
-            if pre_node != 0:
-                self.base[pre_node] = -next_node
-            else:
-                self.unused_head = next_node
-            if next_node != self.da_size:
-                self.check[next_node] = -pre_node
-            else:
-                self.unused_tail = pre_node
-
-            # There is no meaning for 1 except to positive.
-            # Positiveness of check value is used in order to decide a node is used.
-            self.check[node] = 1 
-
         self.base[node] = base_val
                             
     def write_check(self, node, check_val):
@@ -294,11 +281,10 @@ class pyda(object):
     # If word does't contained, address = -1 else return registerd address.
     # If there contained a word which has same prefix, is_succeedalbe = 1 else -1.
     def search(self, word):
-        word_len = len(word)
         current_node = 1
         wd_pt = 0
         
-        while wd_pt < word_len:
+        while wd_pt < len(word):
             next_node = self.forward(current_node, word[wd_pt])
             if next_node == -1:
                 return (-1, -1)
