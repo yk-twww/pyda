@@ -7,6 +7,7 @@ try:
     import cPickle as pickle
 except:
     import pickle
+import sys
 
 
 class pyda(object):
@@ -264,12 +265,13 @@ class pyda(object):
 
         return next_node
 
-        
-                            
     def write_check(self, node, check_val):
         if not self.is_used(node):
             next_node = -self.base[node]
             pre_node  = -self.check[node]
+
+            if self.unused_head == self.unused_tail:
+                self.extend_array(self.extend_size)
             if pre_node != 0:
                 self.base[pre_node] = -next_node
             else:
