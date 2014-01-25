@@ -57,36 +57,66 @@ class pyda(object):
 
         stack = deque([[1, 0, len(words), 0, False]])
         while len(stack) > 0:
-            current_node, left, right, wd_pt, is_leaf = stack.popleft()
+            current_node, left, right, wd_pt, is_leaf = stack.pop()
             if is_leaf:
                 self.write_base(current_node, address_nums[left])
                 continue
-            children, labels = self.make_child(words, left, right, wd_pt)
+
+            children = deque()
+            labels   = deque()
+            label1 = self.char_trans(words[left][wd_pt]) if wd_pt < len(words[left]) else 1
+            next_wd_pt = wd_pt + 1
+            _left = left
+            for _right in xrange(left, right):
+                label2 = self.char_trans(words[_right][wd_pt]) if wd_pt < len(words[_right]) else 1
+                if label2 != label1:
+                    children.append([label1, _left, _right, next_wd_pt, label1 == 1])
+                    labels.append(label1)
+                    label1 = label2
+                    _left = _right
+            children.append([label1, _left, right, next_wd_pt, label1 == 1])
+            labels.append(label1)
+
             new_base = self.search_empty(labels)
             self.write_base(current_node, new_base)
             for child in children:
                 child[0] += new_base
                 self.write_check(child[0], current_node)
-            stack.extendleft(children)
+            stack.extend(children)
         self.size += len(words)
 
-    def make_child(self, words, left, right, wd_pt):
-        children  = deque()
-        labels = deque()
-        label1 = self.char_trans(words[left][wd_pt]) if wd_pt < len(words[left]) else 1
-        label2 = None
-        _left = left
-        for _right in xrange(left, right):
-            label2 = self.char_trans(words[_right][wd_pt]) if wd_pt < len(words[_right]) else 1
-            if label2 != label1:
-                children.appendleft([label1, _left, _right, wd_pt + 1, label1 == 1])
-                labels.appendleft(label1)
-                label1 = label2
-                _left = _right
-        children.appendleft([label1, _left, _right + 1, wd_pt + 1, label1 == 1])
-        labels.appendleft(label1)
+    def build2(self, words, address_nums):
+        words, address_nums = self._sort_by_word(words, address_nums)
 
-        return children, labels
+        stack = deque([[0, 1, 0, len(words), 0, False]])
+        base_stack = deque([0])
+        while len(stack) > 0:
+            pre_node, label, left, right, wd_pt, is_leaf = stack.pop()
+            base = base_stack.pop()
+            current_node = base + label
+            self.write_check(current_node, pre_node)
+            if is_leaf:
+                self.write_base(current_node, address_nums[left])
+                continue
+
+            labels = deque()
+            label1 = self.char_trans(words[left][wd_pt]) if wd_pt < len(words[left]) else 1
+            _left = left
+            next_wd_pt = wd_pt + 1
+            for _right in xrange(left, right):
+                label2 = self.char_trans(words[_right][wd_pt]) if wd_pt < len(words[_right]) else 1
+                if label2 != label1:
+                    stack.append([current_node, label1, _left, _right, next_wd_pt, label1 == 1])
+                    labels.append(label1)
+                    label1 = label2
+                    _left = _right
+            stack.append([current_node, label1, _left, right, next_wd_pt, label1 == 1])
+            labels.append(label1)
+
+            new_base = self.search_empty(labels)
+            self.write_base(current_node, new_base)
+            base_stack.extend(new_base for _ in xrange(len(labels)))
+        self.size += len(words)
 
 
     def insert(self, word, address_num):
