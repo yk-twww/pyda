@@ -85,6 +85,7 @@ class pyda(object):
             stack.extend(children)
         self.size += len(words)
 
+    # EXPERIMENTAL: This method doesn't work well.
     def build2(self, words, address_nums):
         words, address_nums = self._sort_by_word(words, address_nums)
 
@@ -94,7 +95,8 @@ class pyda(object):
             pre_node, label, left, right, wd_pt, is_leaf = stack.pop()
             base = base_stack.pop()
             current_node = base + label
-            self.write_check(current_node, pre_node)
+            if current_node != 1:
+                self.write_check(current_node, pre_node)
             if is_leaf:
                 self.write_base(current_node, address_nums[left])
                 continue
@@ -170,7 +172,7 @@ class pyda(object):
         
         self.write_base(current_node, address_num)
 
-
+    # EXPERIMENTAL: This method works well, but is very slow.
     def insert_rest2(self, current_node, word, wd_pt, address_num):
         while wd_pt < len(word) + 1:
             label = self.char_trans(word[wd_pt]) if wd_pt < len(word) else 1
@@ -285,6 +287,7 @@ class pyda(object):
     def write_base(self, node, base_val):
         self.base[node] = base_val
 
+    # EXPERIMENTAL: This method is used in experimental method .insert_rest2
     def search_empty_and_write_base(self, current_node, label):
         next_node = -self.base[current_node]
         new_base  = next_node - label
