@@ -9,7 +9,6 @@ except:
     import pickle
 
 
-
 class pyda(object):
     @classmethod
     def load(cls, file_obj):
@@ -126,9 +125,11 @@ class pyda(object):
 
 
     def insert_rest(self, current_node, word, wd_pt, address_num):
-        while wd_pt < len(word) + 1:
-            label = self.char_trans(word[wd_pt]) if wd_pt < len(word) else 1
-            new_base = self.search_empty([label])
+        wd_len = len(word)
+        upper = wd_len + 1
+        while wd_pt < upper:
+            label = self.char_trans(word[wd_pt]) if wd_pt < wd_len else 1
+            new_base = self.search_empty_for_one(label)
             self.write_base(current_node, new_base)
             next_node = new_base + label
             self.write_check(next_node, current_node)
@@ -139,11 +140,23 @@ class pyda(object):
         self.write_base(current_node, address_num)
 
 
+    def insert_rest2(self, current_node, word, wd_pt, address_num):
+        while wd_pt < len(word) + 1:
+            label = self.char_trans(word[wd_pt]) if wd_pt < len(word) else 1
+            next_node = self.search_empty_and_write_base(current_node, label)
+            self.write_check(next_node, current_node)
+            current_node = next_node
+            wd_pt += 1
+        
+        self.write_base(current_node, address_num)
+
+
     def delete(self, word):
         current_node = 1
         wd_pt = 0
-        
-        while wd_pt < len(word):
+
+        wd_len = len(word)
+        while wd_pt < wd_len:
             next_node = self.forward(current_node, word[wd_pt])
             if next_node == -1:
                 return 0
@@ -168,8 +181,9 @@ class pyda(object):
     def failed_place(self, word):
         current_node = 1
         wd_pt = 0
-        
-        while wd_pt < len(word):
+
+        wd_len = len(word)
+        while wd_pt < wd_len:
             next_node = self.forward(current_node, word[wd_pt])
             if next_node == -1:
                 return (current_node, wd_pt)
@@ -213,6 +227,9 @@ class pyda(object):
                 return cand_base
             cand_base += 1
 
+    def search_empty_for_one(self, label):
+        return self.unused_head - label
+
     def modify(self, current_node, new_base):
         old_base = self.base[current_node]
         label_ls = self.get_label(current_node)
@@ -236,6 +253,18 @@ class pyda(object):
     # method is used for it.
     def write_base(self, node, base_val):
         self.base[node] = base_val
+
+    def search_empty_and_write_base(self, current_node, label):
+        next_node = -self.base[current_node]
+        new_base  = next_node - label
+
+        if next_node == self.da_size:
+            self.extend_array(5)
+        self.base[current_node] = new_base
+
+        return next_node
+
+        
                             
     def write_check(self, node, check_val):
         if not self.is_used(node):
@@ -256,6 +285,7 @@ class pyda(object):
         self.check_index[check_val].append(node)
 
         self.check[node] = check_val
+
 
     def is_used(self, node):
         if node >= self.da_size:
@@ -283,8 +313,9 @@ class pyda(object):
     def search(self, word):
         current_node = 1
         wd_pt = 0
-        
-        while wd_pt < len(word):
+
+        wd_len = len(word)
+        while wd_pt < wd_len:
             next_node = self.forward(current_node, word[wd_pt])
             if next_node == -1:
                 return (-1, -1)
@@ -315,10 +346,11 @@ class pyda(object):
             child_nodes = self.get_child(current_node)
             current_base = self.base[current_node]
             for child_node in child_nodes:
-                stack.appendleft((prefix + self.recover_char(child_node - current_base,
-                                                             is_unicode),
-                                  child_node,
-                                  child_node - current_base == 1))
+                stack.appendleft((
+                    prefix + self.recover_char(child_node - current_base, is_unicode),
+                    child_node,
+                    child_node - current_base == 1
+                ))
 
         return list(searched_words)
 
