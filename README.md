@@ -54,7 +54,7 @@ da.build(["hoge", "foo", "fuga"], [0, 1, 2])
 
 #### .*insert*(*word*, *address_num*)
 
-```pyhton
+```python
 da = pyda()
 da.insert("hoge", 12)
 da.search("hoge") # => (12, -1)
